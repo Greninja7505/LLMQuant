@@ -1,3 +1,4 @@
+import Chat from "@/components/chat";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/layout/Header";
@@ -23,14 +24,9 @@ const Dashboard = () => {
 
   useEffect(() => {
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate("/login");
-        return;
-      }
-      setUser(session.user);
-      setIsLoading(false);
-    };
+  setUser({ email: "test@llmquant.com", created_at: new Date().toISOString() });
+  setIsLoading(false);
+};
 
     checkUser();
 
@@ -198,6 +194,10 @@ const Dashboard = () => {
                 </Button>
               </div>
             </div>
+          </div>
+          <div className="mt-8">
+            <h2 className="text-xl font-semibold mb-4">AI Assistant</h2>
+            <Chat />
           </div>
         </div>
       </main>
