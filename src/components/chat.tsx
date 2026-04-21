@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useRole } from "@/context/RoleContext";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Loader2 } from "lucide-react";
@@ -15,10 +16,29 @@ const Chat = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [userScrolled, setUserScrolled] = useState(false);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
+  // Auto scroll only when user sends a new message
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!userScrolled) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages.length]); // only fires when a new message is added, not every token
+
+  // Detect if user scrolled up manually
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+      setUserScrolled(!isAtBottom);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -51,6 +71,7 @@ const Chat = () => {
         for (const line of lines) {
           try {
             const parsed = JSON.parse(line);
+            if (parsed.done === true) break;
             if (parsed.message?.content) {
               assistantMessage += parsed.message.content;
               setMessages((prev) => {
@@ -77,8 +98,20 @@ const Chat = () => {
 
   return (
     <div className="flex flex-col h-[600px] rounded-xl bg-card border border-border">
+      {/* Model indicator */}
+      <div className="px-4 py-2 border-b border-border">
+        <p className="text-xs text-muted-foreground">
+          Role: <span className="font-medium">{role}</span> → Model:{" "}
+          <span className="font-medium">
+            {role === "hr" ? "t2qwen7B:latest" :
+             role === "dev" ? "qwen7B:latest" :
+             role === "finance" ? "tqwen7B:latest" :
+             "qwen7B:latest"}
+          </span>
+        </p>
+      </div>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <p className="text-center text-muted-foreground text-sm mt-8">
             Ask anything. Your data stays on this machine.
@@ -96,7 +129,7 @@ const Chat = () => {
                   : "bg-secondary text-secondary-foreground"
               }`}
             >
-              {msg.content}
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
             </div>
           </div>
         ))}

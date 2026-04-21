@@ -6,12 +6,12 @@ const RoleContext = createContext<{
   role: Role;
   setRole: (role: Role) => void;
 }>({
-  role: "default",
+  role: "hr",
   setRole: () => {},
 });
 
 export const RoleProvider = ({ children }: { children: React.ReactNode }) => {
-  const [role, setRole] = useState<Role>("dev"); // 👈 hardcode role here for now
+  const [role, setRole] = useState<Role>("hr"); // 👈 hardcode role here for now
   return (
     <RoleContext.Provider value={{ role, setRole }}>
       {children}
