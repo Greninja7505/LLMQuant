@@ -11,7 +11,7 @@ const RoleContext = createContext<{
 });
 
 export const RoleProvider = ({ children }: { children: React.ReactNode }) => {
-  const [role, setRole] = useState<Role>("hr"); // 👈 hardcode role here for now
+  const [role, setRole] = useState<Role>("hr"); 
   return (
     <RoleContext.Provider value={{ role, setRole }}>
       {children}

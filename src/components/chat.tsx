@@ -3,7 +3,7 @@ import { useRole } from "@/context/RoleContext";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Loader2 } from "lucide-react";
+import { Send, Loader2, Trash2 } from "lucide-react";
 
 type Message = {
   role: "user" | "assistant";
@@ -12,7 +12,14 @@ type Message = {
 
 const Chat = () => {
   const { role } = useRole();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(`chat_history_${role}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -40,6 +47,10 @@ const Chat = () => {
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem(`chat_history_${role}`, JSON.stringify(messages));
+  }, [messages, role]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -61,31 +72,38 @@ const Chat = () => {
 
       setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-      while (reader) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      let isDone = false;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter(Boolean);
+while (reader && !isDone) {
+  const { done, value } = await reader.read();
+  if (done) break;
 
-        for (const line of lines) {
-          try {
-            const parsed = JSON.parse(line);
-            if (parsed.done === true) break;
-            if (parsed.message?.content) {
-              assistantMessage += parsed.message.content;
-              setMessages((prev) => {
-                const updated = [...prev];
-                updated[updated.length - 1] = {
-                  role: "assistant",
-                  content: assistantMessage,
-                };
-                return updated;
-              });
-            }
-          } catch {}
-        }
+  const chunk = decoder.decode(value);
+  const lines = chunk.split("\n").filter(Boolean);
+
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line);
+      
+      if (parsed.done === true) {
+        isDone = true;
+        break;
       }
+      
+      if (parsed.message?.content) {
+        assistantMessage += parsed.message.content;
+        setMessages((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            role: "assistant",
+            content: assistantMessage,
+          };
+          return updated;
+        });
+      }
+    } catch {}
+  }
+}
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -154,6 +172,17 @@ const Chat = () => {
         />
         <Button onClick={sendMessage} disabled={isLoading || !input.trim()}>
           <Send className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            setMessages([]);
+            localStorage.removeItem(`chat_history_${role}`);
+          }}
+          title="Clear history"
+        >
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
     </div>
